@@ -1,0 +1,44 @@
+import requests
+
+# Replace with your Stable Diffusion API key
+api_key = "AIzaSyBf1yzhnXC8CnMw33ei4N8mIGfTczHXXF8"
+
+# Endpoint for the Stable Diffusion API
+url = "https://api.stability.ai/v1beta/generation/stable-diffusion-v1-5/text-to-image"
+
+# Parameters for the image generation
+payload = {
+    "text_prompts": [
+        {
+            "text": "A futuristic city with flying cars at sunset",
+            "weight": 1
+        }
+    ],
+    "cfg_scale": 7.5,  # How much to follow the text prompt (default: 7.5)
+    "clip_guidance_preset": "FAST_BLUE",
+    "height": 512,  # Height of the image
+    "width": 512,   # Width of the image
+    "samples": 1    # Number of images to generate
+}
+
+# Headers for authentication and content type
+headers = {
+    "Authorization": f"Bearer {api_key}",
+    "Content-Type": "application/json"
+}
+
+# Make the API request to generate the image
+response = requests.post(url, json=payload, headers=headers)
+
+# Check if the request was successful
+if response.status_code == 200:
+    # The image comes as base64 encoded, decode it and save it as a file
+    image_data = response.json()['artifacts'][0]['base64']
+    
+    # Save the image to a file
+    with open("generated_image.png", "wb") as img_file:
+        img_file.write(base64.b64decode(image_data))
+    
+    print("Image generated successfully and saved as generated_image.png")
+else:
+    print(f"Failed to generate image: {response.status_code}, {response.text}")
