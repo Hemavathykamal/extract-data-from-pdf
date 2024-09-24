@@ -1,0 +1,82 @@
+import os
+import pytesseract
+import pdfplumber
+import pandas as pd
+from PIL import Image
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
+from googleapiclient.discovery import build
+
+# 1. Google Gemini API Setup
+API_KEY = "AIzaSyBf1yzhnXC8CnMw33ei4N8mIGfTczHXXF8"
+API_ENDPOINT = 'https://api.geminivisionpro.com/v1/process'
+
+def google_gemini_request(prompt):
+    headers = {'x-api-key': API_KEY}
+    data = {'prompt': prompt}
+    
+    response = requests.post(API_ENDPOINT, json=data, headers=headers)
+    
+    if response.status_code == 200:
+        return response.json().get('output', '')
+    else:
+        raise Exception(f"API error: {response.status_code}, {response.text}")
+
+# 2. Extract Text from PDF using pdfplumber
+def extract_text_from_pdf(pdf_file):
+    text = ""
+    with pdfplumber.open(pdf_file) as pdf:
+        for page in pdf.pages:
+            text += page.extract_text() + "\n"
+    return text
+
+# 3. Extract Text from Image using pytesseract
+def extract_text_from_image(image_file):
+    image = Image.open(image_file)
+    text = pytesseract.image_to_string(image)
+    return text
+
+# 4. Process Text with LangChain and Google Gemini
+def process_bank_statement_with_llm(extracted_text):
+    # Use LangChain to create a prompt template
+    prompt_template = """
+    Extract the following details from this bank statement text:
+    
+    1. List of transactions with date, description, and amount.
+    2. Starting and ending balance.
+    
+    Text:
+    {text}
+    """
+    
+    prompt = prompt_template.format(text=extracted_text)
+    
+    # Send prompt to Google Gemini API
+    extracted_info = google_gemini_request(prompt)
+    
+    return extracted_info
+
+# 5. Display Transactions in Structured Format
+def display_extracted_data(extracted_info):
+    print("Extracted Bank Statement Information:")
+    print(extracted_info)
+
+# Main Function to Process PDF or Image Bank Statement
+def main(input_file, file_type='pdf'):
+    if file_type == 'pdf':
+        extracted_text = extract_text_from_pdf(input_file)
+    elif file_type == 'image':
+        extracted_text = extract_text_from_image(input_file)
+    else:
+        raise ValueError("Invalid file type. Please use 'pdf' or 'image'.")
+    
+    # Process extracted text using Google Gemini and LangChain
+    extracted_info = process_bank_statement_with_llm(extracted_text)
+    
+    # Display extracted transactions and other details
+    display_extracted_data(extracted_info)
+
+# Example Usage
+if _name_ == "_main_":
+    input_file = "bank_statement.pdf"
+    main(input_file, file_type='pdf')
